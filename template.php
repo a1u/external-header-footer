@@ -1,0 +1,1 @@
+<?php get_header(); ?>{BODY}<?php get_footer(); ?>

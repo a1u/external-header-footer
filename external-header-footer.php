@@ -18,7 +18,10 @@ add_action('init', 'ehf_add_rewrite_rules_parameters', 1);
 
 // Handle requests that contain the "ehf_template" parameter.
 function ehf_parse_request( &$wp ) {
-	if ( array_key_exists( 'ehf_template', $wp->query_vars ) ) {
+    $wp = (object) array();
+    $wp->query_vars = $GLOBALS['ehf_query_vars'];
+
+    if ( array_key_exists( 'ehf_template', $wp->query_vars ) ) {
         global $wp_query;
 
         // If we've disallowed output, exit immediately.
@@ -31,11 +34,12 @@ function ehf_parse_request( &$wp ) {
         		// Execute any actions that have been coded into the theme/other plug-ins to run before the footer is output.
 				do_action('external_header_footer_pre_header');
 
-				// Capture the header of the website to a string.
-				ob_start();
-			    get_header();
-			    $str_output = ob_get_contents();
-			    ob_end_clean();
+                // Capture the header of the website to a string.
+                ob_start();
+                include("template.php");
+                $str_output = ob_get_contents();
+                $str_output = strstr($str_output, '{BODY}', true);
+                ob_end_clean();
 
 			    // If we're forcing use of absolute URLs, filter the output of the header through a function.
 				if ( ( (int) get_option('ehf_force_use_of_absolute', 0) ) == 1 ) {
@@ -55,11 +59,12 @@ function ehf_parse_request( &$wp ) {
     			// Execute any actions that have been coded into the theme/other plug-ins to run before the footer is output.
 				do_action('external_header_footer_pre_footer');
 
-				// Capture the footer of the website to a string.
-				ob_start();
-				get_footer(); 
-				$str_output = ob_get_contents();
-			    ob_end_clean();
+                // Capture the footer of the website to a string.
+                ob_start();
+                include("template.php");
+                $str_output = ob_get_contents();
+                $str_output = substr(strstr($str_output, '{BODY}', false), 6, -1);
+                ob_end_clean();
 
 			    // If we're forcing use of absolute URLs, filter the output of the header through a function.
 				if ( ( (int) get_option('ehf_force_use_of_absolute', 0) ) == 1 ) {
@@ -84,7 +89,7 @@ function ehf_parse_request( &$wp ) {
 				Right here is where content is displayed; you should see the header and footer of the external website above and below this text.
 				</p>
 
-				<?php 
+				<?php
 				// Output the external footer to the page.
 				ehf_output_external_footer();
 				exit;
@@ -92,7 +97,11 @@ function ehf_parse_request( &$wp ) {
         }
     }
 }
-add_action('parse_request', 'ehf_parse_request');
+
+add_action('parse_request', function( &$wp ) {
+    $GLOBALS['ehf_query_vars'] = $wp->query_vars;
+});
+add_action('template_redirect', 'ehf_parse_request');
 
 /**
  * Output the contents of the external header wherever the function ehf_output_external_header() is called.
@@ -209,7 +218,7 @@ function external_header_footer_do_settings_page() {
 				<input name="Submit" type="submit" class="button-primary" value="<?php esc_attr_e( 'Save Changes' ); ?>"/>
 			</p>
 
-			<?php settings_fields('external_header_footer_settings_group'); ?>	
+			<?php settings_fields('external_header_footer_settings_group'); ?>
 		</form>
     </div>
     <?php
@@ -277,12 +286,12 @@ function ehf_expose_header_and_footer_checkbox() {
 		<th colspan="2">
 			<h3>Expose Header for External Sites</h3>
 			<p style="font-weight: normal;">
-				If you're got an external website that you'd like to dress up with the same header and footer as this WordPress site, check the <b>Expose Header and Footer</b> 
-				option below, and run a script on that external site to pull down the contents of the <b>Header URL</b> and <b>Footer URL</b> on a regular basis to keep the 
+				If you're got an external website that you'd like to dress up with the same header and footer as this WordPress site, check the <b>Expose Header and Footer</b>
+				option below, and run a script on that external site to pull down the contents of the <b>Header URL</b> and <b>Footer URL</b> on a regular basis to keep the
 				two site looking the same.
 			</p>
 			<p style="font-weight: normal;">
-				Once you've checked <b>Expose Header and Footer</b> and pressed the <b>Save Changes</b> button to enable the option, check out the page at <b>Demo Page URL</b>, 
+				Once you've checked <b>Expose Header and Footer</b> and pressed the <b>Save Changes</b> button to enable the option, check out the page at <b>Demo Page URL</b>,
 				and take a look at its source code to see an example of how to retrieve and display the header and footer of this website using PHP.
 			</p>
 		</th>
@@ -290,10 +299,10 @@ function ehf_expose_header_and_footer_checkbox() {
 
 	<tr valign="top">
 		<th scope="row">Expose Header and Footer</th>
-		<td> 
+		<td>
 			<legend class="screen-reader-text"><span>Expose Header and Footer</span></legend>
 			<label for="ehf_expose_header_and_footer">
-				<input name="ehf_expose_header_and_footer" type="checkbox" id="ehf_expose_header_and_footer" value="1" <?php echo $ehf_expose_header_and_footer_checked; ?>/> 
+				<input name="ehf_expose_header_and_footer" type="checkbox" id="ehf_expose_header_and_footer" value="1" <?php echo $ehf_expose_header_and_footer_checked; ?>/>
 				Allow this site's header and footer can be consumed by other websites
 			</label>
 		</td>
@@ -341,10 +350,10 @@ function ehf_expose_force_use_of_https_checkbox() {
 	?>
 	<tr valign="top">
 		<th scope="row">Force Use Of HTTPS</th>
-		<td> 
+		<td>
 			<legend class="screen-reader-text"><span>Force Use Of HTTPS</span></legend>
 			<label for="ehf_force_use_of_https">
-				<input name="ehf_force_use_of_https" type="checkbox" id="ehf_force_use_of_https" value="1" <?php echo $ehf_force_use_of_https_checked; ?>/> 
+				<input name="ehf_force_use_of_https" type="checkbox" id="ehf_force_use_of_https" value="1" <?php echo $ehf_force_use_of_https_checked; ?>/>
 				Force all URLs pointing to your this WordPress site's domain in your header and footer to be automatically rewritten to use HTTPS
 			</label>
 		</td>
@@ -362,10 +371,10 @@ function ehf_expose_force_use_of_absolute_urls_checkbox() {
 	?>
 	<tr valign="top">
 		<th scope="row">Force Use Of Absolute URLs</th>
-		<td> 
+		<td>
 			<legend class="screen-reader-text"><span>Force Use Of Absolute URLs</span></legend>
 			<label for="ehf_force_use_of_absolute">
-				<input name="ehf_force_use_of_absolute" type="checkbox" id="ehf_force_use_of_absolute" value="1" <?php echo $ehf_force_use_of_absolute_checked; ?>/> 
+				<input name="ehf_force_use_of_absolute" type="checkbox" id="ehf_force_use_of_absolute" value="1" <?php echo $ehf_force_use_of_absolute_checked; ?>/>
 				Convert all URLs that are relative to the site root to absolute URLs
 			</label>
 		</td>
@@ -383,10 +392,10 @@ function ehf_consume_header_and_footer_checkbox() {
 	?>
 	<tr valign="top">
 		<th scope="row">Consume External Header / Footer</th>
-		<td> 
+		<td>
 			<legend class="screen-reader-text"><span>Consume Header and Footer</span></legend>
 			<label for="ehf_consume_header_and_footer">
-				<input name="ehf_consume_header_and_footer" type="checkbox" id="ehf_consume_header_and_footer" value="1" <?php echo $ehf_consume_header_and_footer_checked; ?>/> 
+				<input name="ehf_consume_header_and_footer" type="checkbox" id="ehf_consume_header_and_footer" value="1" <?php echo $ehf_consume_header_and_footer_checked; ?>/>
 				If checked, the <code>ehf_output_external_header()</code> and <code>ehf_output_external_footer()</code> functions will output the contents of the header and footer URLs listed below
 			</label>
 		</td>
@@ -402,12 +411,12 @@ function ext_external_header_url_text() {
 		<th colspan="2">
 			<h3>Consume Header / Footer from External Website</h3>
 			<p style="font-weight: normal;">
-				If you've enabled the External Header Footer plug-in on another WordPress website, and want to use its header on <i>this</i> WordPress website, you can use the 
-				fields below to automatically retrieve the header and footer of that website. 
+				If you've enabled the External Header Footer plug-in on another WordPress website, and want to use its header on <i>this</i> WordPress website, you can use the
+				fields below to automatically retrieve the header and footer of that website.
 			</p>
 			<p style="font-weight: normal;">
-				Next, update the <code>header.php</code> and <code>footer.php</code> files of this WordPress theme to call the function <code>ehf_output_external_header()</code> 
-				and <code>ehf_output_external_footer()</code> respectively. This plug-in will automatically retrieve and cache the contents of the external site's header and 
+				Next, update the <code>header.php</code> and <code>footer.php</code> files of this WordPress theme to call the function <code>ehf_output_external_header()</code>
+				and <code>ehf_output_external_footer()</code> respectively. This plug-in will automatically retrieve and cache the contents of the external site's header and
 				footer for the amount of minutes specified in <b>Cache Header/Footer For</b>.
 		</th>
 	</tr>
@@ -432,7 +441,7 @@ function ext_external_footer_url_text() {
 			<input name="ehf_external_footer_url" type="text" id="ehf_external_footer_url" value="<?php echo $ehf_external_footer_url; ?>" class="regular-text code" style="width: 600px;" />
 			<p class="description">The function <code>ehf_output_external_footer()</code> will output the contents of the page retrieved at the URL input into the field above.</p>
 		</td>
-	</tr>		
+	</tr>
 	<?php
 }
 
@@ -449,7 +458,7 @@ function ehf_external_cache_expiry_text() {
 			<input name="ehf_external_cache_expiry" type="text" id="ehf_external_cache_expiry" value="<?php echo $ehf_external_cache_expiry; ?>" class="regular-text" style="width: 75px;" /> minutes
 			<p class="description">The amount of time that the external header/footer should be cached locally for before being retrieved again.</p>
 		</td>
-	</tr>	
+	</tr>
 
 	<tr valign="top">
 		<th scope="row">
@@ -459,12 +468,12 @@ function ehf_external_cache_expiry_text() {
 			<code><a target="_blank" href="<?php echo $ehf_external_test_url; ?>"><?php echo $ehf_external_test_url; ?></a></code>
 			<p class="description">This page demonstrates what an external page wrapped with the specified external header and footer would look like.</p>
 		</td>
-	</tr>	
-	<?php	
+	</tr>
+	<?php
 }
 
 /**
- * Called when a new value is sent to the "Expose Header and Footer" field; flushes the internal cache of WordPress rewrite rules / permalinks 
+ * Called when a new value is sent to the "Expose Header and Footer" field; flushes the internal cache of WordPress rewrite rules / permalinks
  * to ensure the new rules for the plug-in are accessible.
  *
  * @return string
@@ -477,7 +486,7 @@ function ehf_external_clear_cache( $value ) {
 }
 
 /**
- * Called when a new value is sent to the "External Header URL" or "External Footer URL"; clears the Transients API cache of 
+ * Called when a new value is sent to the "External Header URL" or "External Footer URL"; clears the Transients API cache of
  * what may already be saved to those fields to ensure changes to what is wished to be retrieved occurs immediately.
  *
  * @return integer
